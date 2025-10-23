@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}E-mails Enviados{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>E-mails enviados</h1>
+    <p>Relação de e-mails enviados para o administrador do sistema, notificando o cadastro de novos usuários.</p>
+</div>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>De</th>
+            <th>Para</th>
+            <th>Assunto</th>
+            <th>Texto</th>
+            <th>Data/Hora</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for email in emails %}
+        <tr>
+            <td>{{ email.sender }}</td>
+            <td>{{ email.recipient }}</td>
+            <td>{{ email.subject }}</td>
+            <td>{{ email.body }}</td>
+            <td>
+                {{ moment(email.timestamp).format('DD/MM/YYYY HH:mm:ss') }}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
