@@ -15,13 +15,13 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
 
-# --- Configurações ---
+# Configurações 
 app.config['SECRET_KEY'] = 'uma string bem dificil de adivinhar'
 app.config['SQLALCHEMY_DATABASE_URI'] =\
     'sqlite:///' + os.path.join(basedir, 'data.sqlite')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Configs do SendGrid e Aluno (lidas do .env)
+
 app.config['SENDGRID_API_KEY'] = os.environ.get('SENDGRID_API_KEY')
 app.config['API_FROM'] = os.environ.get('API_FROM')
 app.config['FLASKY_ADMIN'] = os.environ.get('FLASKY_ADMIN')
@@ -37,7 +37,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
-# --- Modelos do Banco de Dados ---
+# Modelos do Banco de Dados
 class Role(db.Model):
     __tablename__ = 'roles'
     id = db.Column(db.Integer, primary_key=True)
@@ -67,7 +67,7 @@ class User(db.Model):
     def __repr__(self):
         return '<User %r>' % self.username
 
-# NOVO MODELO para persistir e-mails
+# novo modelo para persistir e-mails
 class EmailLog(db.Model):
     __tablename__ = 'emails'
     id = db.Column(db.Integer, primary_key=True)
@@ -81,11 +81,10 @@ class EmailLog(db.Model):
         return f'<EmailLog {self.subject}>'
 
 
-# --- Função de Envio de E-mail (com SendGrid e Log no DB) ---
+# Função de Envio de E-mail
 def send_email_sendgrid(to_list, subject, html_content_body, text_body):
     """Envia e-mail com SendGrid e registra no DB."""
 
-    # Formata o assunto com o prefixo
     full_subject = f"{app.config['FLASKY_MAIL_SUBJECT_PREFIX']} {subject}"
 
     if len(to_list) == 1:
@@ -95,7 +94,7 @@ def send_email_sendgrid(to_list, subject, html_content_body, text_body):
 
     message = Mail(
         from_email=app.config['API_FROM'],
-        to_emails=destinos,  # <--- USA A NOVA VARIÁVEL
+        to_emails=destinos,  
         subject=full_subject,
         html_content=html_content_body
     )
@@ -104,7 +103,7 @@ def send_email_sendgrid(to_list, subject, html_content_body, text_body):
         response = sg.send(message)
         print(f"E-mail enviado para {to_list}, status: {response.status_code}")
 
-        # Persistir no banco de dados (NOVO REQUISITO)
+        # Persistir no banco de dados
         log_entry = EmailLog(
             sender=app.config['API_FROM'],
             recipient=str(to_list), # Salva a lista de e-mails como string
@@ -122,22 +121,20 @@ def send_email_sendgrid(to_list, subject, html_content_body, text_body):
         return False
 
 
-# --- Formulário ---
+# Formulário
 class NameForm(FlaskForm):
     name = StringField('Qual é o seu nome?', validators=[DataRequired()])
-    # O nome 'email' é usado no código base que você forneceu
     email = BooleanField('Deseja enviar e-mail para flaskaulasweb@zohomail.com?')
     submit = SubmitField('Submit')
 
 
-# --- Contexto do Shell ---
+# Contexto do Shell 
 @app.shell_context_processor
 def make_shell_context():
-    # Adiciona o novo modelo EmailLog ao shell
     return dict(db=db, User=User, Role=Role, EmailLog=EmailLog)
 
 
-# --- Rotas da Aplicação ---
+# Rotas da Aplicação 
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
@@ -155,7 +152,7 @@ def index():
         user = User.query.filter_by(username=form.name.data).first()
         if user is None:
             user_role = Role.query.filter_by(name='User').first()
-            # Se for o primeiro usuário, define como admin (bônus)
+            # Se for o primeiro usuário, define como admin
             if User.query.count() == 0:
                  user_role = Role.query.filter_by(name='Administrator').first()
 
@@ -204,9 +201,8 @@ def index():
                            known=session.get('known', False), users=users)
 
 
-# --- NOVA ROTA PARA LISTAR E-MAILS ---
+# NOVA ROTA PARA LISTAR E-MAILS 
 @app.route('/emailsEnviados')
 def emails_enviados():
-    # Busca todos os e-mails, dos mais novos para os mais antigos
     emails = EmailLog.query.order_by(EmailLog.timestamp.desc()).all()
     return render_template('emails_enviados.html', emails=emails)
