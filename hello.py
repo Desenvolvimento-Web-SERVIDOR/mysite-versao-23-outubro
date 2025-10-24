@@ -84,13 +84,18 @@ class EmailLog(db.Model):
 # --- Função de Envio de E-mail (com SendGrid e Log no DB) ---
 def send_email_sendgrid(to_list, subject, html_content_body, text_body):
     """Envia e-mail com SendGrid e registra no DB."""
-    
+
     # Formata o assunto com o prefixo
     full_subject = f"{app.config['FLASKY_MAIL_SUBJECT_PREFIX']} {subject}"
 
+    if len(to_list) == 1:
+        destinos = to_list[0]
+    else:
+        destinos = tuple(to_list)
+
     message = Mail(
         from_email=app.config['API_FROM'],
-        to_emails=to_list,
+        to_emails=destinos,  # <--- USA A NOVA VARIÁVEL
         subject=full_subject,
         html_content=html_content_body
     )
@@ -109,7 +114,7 @@ def send_email_sendgrid(to_list, subject, html_content_body, text_body):
         db.session.add(log_entry)
         db.session.commit()
         print("Log de e-mail salvo no banco de dados.")
-        
+
         return True
 
     except Exception as e:
@@ -153,7 +158,7 @@ def index():
             # Se for o primeiro usuário, define como admin (bônus)
             if User.query.count() == 0:
                  user_role = Role.query.filter_by(name='Administrator').first()
-            
+
             user = User(username=form.name.data, role=user_role)
             db.session.add(user)
             db.session.commit()
@@ -174,22 +179,25 @@ def index():
                 <hr>
                 <p><strong>Nome do novo usuário:</strong> {new_user_name}</p>
             """
-            
+
             # Envia e-mail usando a nova função
-            send_email_sendgrid(
+            success = send_email_sendgrid(
                 to_list=destinatarios,
                 subject='Novo usuário',
                 html_content_body=html_body,
                 text_body=text_body
             )
-            flash('Novo usuário cadastrado e e-mail(s) enviados!')
+            if success:
+                flash('Novo usuário cadastrado e e-mail(s) enviados com sucesso!', 'success')
+            else:
+                flash('Usuário salvo, mas houve um ERRO ao enviar/salvar o e-mail. Verifique os logs.', 'danger')
 
         else:
             session['known'] = True
-        
+
         session['name'] = form.name.data
         return redirect(url_for('index'))
-    
+
     # Busca todos os usuários para a tabela
     users = User.query.order_by(User.id.asc()).all()
     return render_template('index.html', form=form, name=session.get('name'),
